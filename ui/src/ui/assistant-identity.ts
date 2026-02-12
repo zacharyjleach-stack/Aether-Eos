@@ -2,7 +2,7 @@ const MAX_ASSISTANT_NAME = 50;
 const MAX_ASSISTANT_AVATAR = 200;
 
 export const DEFAULT_ASSISTANT_NAME = "O.R.I.O.N";
-export const DEFAULT_ASSISTANT_AVATAR = "🛰️";
+export const DEFAULT_ASSISTANT_AVATAR = "⭐";
 
 export type AssistantIdentity = {
   agentId?: string | null;

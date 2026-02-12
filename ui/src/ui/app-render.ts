@@ -138,7 +138,7 @@ export function renderApp(state: AppViewState) {
             </div>
             <div class="brand-text">
               <div class="brand-title">O.R.I.O.N</div>
-              <div class="brand-sub">Gateway Dashboard</div>
+              <div class="brand-sub">Neural Interface</div>
             </div>
           </div>
         </div>
