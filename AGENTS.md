@@ -152,3 +152,60 @@ openclaw gateway run                    # Start gateway (foreground)
 openclaw gateway status                 # Check status
 openclaw gateway h
 ```
+
+## Universal Deployer
+
+Cross-platform setup scripts in `bin/` that install all prerequisites and configure O.R.I.O.N. to use a local Ollama instance with Llama 3.
+
+### One-Liner Install
+
+**macOS / Linux:**
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/zacharyjleach-stack/O.R.I.O.N./main/bin/setup.sh)
+```
+
+**Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/zacharyjleach-stack/O.R.I.O.N./main/bin/setup.ps1 | iex
+```
+
+**From cloned repo:**
+
+```bash
+# macOS/Linux
+bash bin/setup.sh
+
+# Windows PowerShell
+.\bin\setup.ps1
+```
+
+### What the Scripts Do
+
+1. Install Node.js ≥ 22 (brew/NodeSource on Linux, winget/choco on Windows)
+2. Install pnpm (via corepack or npm)
+3. Install Ollama (official installer)
+4. Pull the `llama3` model
+5. Run `pnpm install && pnpm build`
+6. Generate `~/.openclaw/openclaw.json` with local Ollama provider config
+
+### Config Structure (Local Ollama)
+
+The generated config at `~/.openclaw/openclaw.json`:
+
+- Sets `OLLAMA_API_KEY=ollama` in `env.vars` (required for Ollama provider discovery)
+- Defines a `local_ollama` provider pointing to `http://127.0.0.1:11434/v1`
+- Uses `openai-completions` API (Ollama's OpenAI-compatible endpoint)
+- Sets `local_ollama/llama3` as the default agent model via `agents.defaults.model`
+
+### Adding More Models
+
+After setup, pull additional models and add them to the config:
+
+```bash
+ollama pull mistral
+ollama pull codellama
+```
+
+Then add entries to `models.providers.local_ollama.models[]` in `~/.openclaw/openclaw.json`.
