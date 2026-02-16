@@ -331,12 +331,15 @@ function Install-PlaywrightBrowsers {
     $browsersDir = Join-Path $InstallDir "bin\browsers"
     $env:PLAYWRIGHT_BROWSERS_PATH = $browsersDir
 
-    # Fix Windows ACL issues: ensure the current user owns the project tree
-    Write-Info "Fixing folder permissions for Playwright..."
+    # Ensure the browsers directory exists and the current user has full control
+    if (-not (Test-Path $browsersDir)) {
+        New-Item -ItemType Directory -Path $browsersDir -Force | Out-Null
+    }
+    Write-Info "Fixing folder permissions for Playwright browsers directory..."
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "SilentlyContinue"
-    $null = (takeown /f "$InstallDir" /r /d y 2>&1)
-    $null = (icacls "$InstallDir" /grant "${env:USERNAME}:(OI)(CI)F" /t /q 2>&1)
+    $null = (takeown /f "$browsersDir" /r /d y 2>&1)
+    $null = (icacls "$browsersDir" /grant "${env:USERNAME}:(OI)(CI)F" /t /q 2>&1)
     $ErrorActionPreference = $prevEAP
 
     Write-Info "Installing Playwright Chromium browser..."
