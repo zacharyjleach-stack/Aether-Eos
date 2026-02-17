@@ -437,7 +437,10 @@ function New-OrionConfig {
         New-Item -ItemType Directory -Path $configDir -Force | Out-Null
     }
 
-    $config = @'
+    # Generate a random gateway auth token
+    $gwToken = -join ((1..32) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
+
+    $config = @"
 {
   "env": {
     "vars": {
@@ -455,25 +458,35 @@ function New-OrionConfig {
             "id": "llama3",
             "name": "Llama 3",
             "reasoning": false,
-            "contextWindow": 16384,
-            "maxTokens": 4096,
+            "contextWindow": 128000,
+            "maxTokens": 8192,
             "input": ["text"],
-            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "compat": { "maxTokensField": "max_tokens" }
           }
         ]
       }
     }
   },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "token": "$gwToken"
+    }
+  },
   "agents": {
     "defaults": {
-      "model": "local_ollama/llama3"
+      "model": {
+        "primary": "local_ollama/llama3"
+      }
     }
   }
 }
-'@
+"@
 
     Set-Content -Path $configFile -Value $config -Encoding UTF8
     Write-Ok ("Config written to " + $configFile)
+    Write-Ok ("Gateway token: " + $gwToken)
 }
 
 # -- Verify build --------------------------------------------------------------

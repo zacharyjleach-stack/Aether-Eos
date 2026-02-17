@@ -197,7 +197,8 @@ The generated config at `~/.openclaw/openclaw.json`:
 - Sets `OLLAMA_API_KEY=ollama` in `env.vars` (required for Ollama provider discovery)
 - Defines a `local_ollama` provider pointing to `http://127.0.0.1:11434/v1`
 - Uses `openai-completions` API (Ollama's OpenAI-compatible endpoint)
-- Sets `local_ollama/llama3` as the default agent model via `agents.defaults.model`
+- Sets `local_ollama/llama3` as the default agent model via `agents.defaults.model.primary`
+- Streaming is automatically disabled for Ollama providers (workaround for pi-ai SDK issue #1205)
 
 ### Adding More Models
 

@@ -160,7 +160,14 @@ generate_config() {
   mkdir -p "$CONFIG_DIR"
   chmod 700 "$CONFIG_DIR"
 
-  cat > "$CONFIG_FILE" <<'CONFIGEOF'
+  # Generate a random gateway auth token
+  if command -v openssl >/dev/null 2>&1; then
+    GW_TOKEN=$(openssl rand -hex 16)
+  else
+    GW_TOKEN=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')
+  fi
+
+  cat > "$CONFIG_FILE" <<CONFIGEOF
 {
   "env": {
     "vars": {
@@ -178,18 +185,27 @@ generate_config() {
             "id": "llama3",
             "name": "Llama 3",
             "reasoning": false,
-            "contextWindow": 16384,
-            "maxTokens": 4096,
+            "contextWindow": 128000,
+            "maxTokens": 8192,
             "input": ["text"],
-            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "compat": { "maxTokensField": "max_tokens" }
           }
         ]
       }
     }
   },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "token": "${GW_TOKEN}"
+    }
+  },
   "agents": {
     "defaults": {
-      "model": "local_ollama/llama3"
+      "model": {
+        "primary": "local_ollama/llama3"
+      }
     }
   }
 }
@@ -197,6 +213,7 @@ CONFIGEOF
 
   chmod 600 "$CONFIG_FILE"
   ok "Config written to $CONFIG_FILE"
+  ok "Gateway token: $GW_TOKEN"
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
