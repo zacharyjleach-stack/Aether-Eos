@@ -74,6 +74,7 @@ function defaultIndexHTML() {
   .bad { color: #ff5c5c; }
   .log { margin-top: 14px; opacity: 0.85; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; white-space: pre-wrap; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 12px; }
 </style>
+<body>
 <div class="wrap">
   <div class="card">
     <div class="title">
@@ -110,11 +111,17 @@ function defaultIndexHTML() {
         typeof window.openclawCanvasA2UIAction.postMessage === "function")
     );
   const hasHelper = () => typeof window.openclawSendUserAction === "function";
-  statusEl.innerHTML =
-    "Bridge: " +
-    (hasHelper() ? "<span class='ok'>ready</span>" : "<span class='bad'>missing</span>") +
-    " · iOS=" + (hasIOS() ? "yes" : "no") +
-    " · Android=" + (hasAndroid() ? "yes" : "no");
+
+  function updateStatus() {
+    statusEl.innerHTML =
+      "Bridge: " +
+      (hasHelper() ? "<span class='ok'>ready</span>" : "<span class='bad'>missing</span>") +
+      " · iOS=" + (hasIOS() ? "yes" : "no") +
+      " · Android=" + (hasAndroid() ? "yes" : "no");
+  }
+  // Update immediately, then re-check after bridge injection completes.
+  updateStatus();
+  setTimeout(updateStatus, 0);
 
   const onStatus = (ev) => {
     const d = ev && ev.detail || {};
@@ -124,7 +131,7 @@ function defaultIndexHTML() {
 
   function send(name, sourceComponentId) {
     if (!hasHelper()) {
-      log("No action bridge found. Ensure you're viewing this on an iOS/Android O.R.I.O.N node canvas.");
+      log("No action bridge found.");
       return;
     }
     const sendUserAction =
@@ -146,6 +153,7 @@ function defaultIndexHTML() {
   document.getElementById("btn-dalek").onclick = () => send("dalek", "demo.dalek");
 })();
 </script>
+</body>
 `;
 }
 
@@ -194,9 +202,6 @@ async function resolveFilePath(rootReal: string, urlPath: string) {
 }
 
 function isDisabledByEnv() {
-  if (isTruthyEnvValue(process.env.OPENCLAW_SKIP_CANVAS_HOST)) {
-    return true;
-  }
   if (isTruthyEnvValue(process.env.OPENCLAW_SKIP_CANVAS_HOST)) {
     return true;
   }
@@ -270,6 +275,20 @@ export async function createCanvasHostHandler(
     wss.on("connection", (ws) => {
       sockets.add(ws);
       ws.on("close", () => sockets.delete(ws));
+      ws.on("message", (data) => {
+        // Handle canvas action messages from desktop bridge.
+        try {
+          const raw = typeof data === "string" ? data : data.toString("utf8");
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            opts.runtime.log(`canvas bridge action: ${JSON.stringify(parsed)}`);
+            const status = { type: "action-status", id: parsed.userAction?.id, ok: true };
+            ws.send(JSON.stringify(status));
+          }
+        } catch {
+          // Not JSON or malformed — ignore.
+        }
+      });
     });
   }
 

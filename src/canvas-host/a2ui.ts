@@ -108,9 +108,12 @@ export function injectCanvasLiveReload(html: string): string {
   // - iOS: window.webkit.messageHandlers.openclawCanvasA2UIAction.postMessage(...)
   // - Android: window.openclawCanvasA2UIAction.postMessage(...)
   const handlerNames = ["openclawCanvasA2UIAction"];
+  let _bridgeWs = null;
+
   function postToNode(payload) {
     try {
       const raw = typeof payload === "string" ? payload : JSON.stringify(payload);
+      // Try native iOS/Android handlers first.
       for (const name of handlerNames) {
         const iosHandler = globalThis.webkit?.messageHandlers?.[name];
         if (iosHandler && typeof iosHandler.postMessage === "function") {
@@ -119,10 +122,14 @@ export function injectCanvasLiveReload(html: string): string {
         }
         const androidHandler = globalThis[name];
         if (androidHandler && typeof androidHandler.postMessage === "function") {
-          // Important: call as a method on the interface object (binding matters on Android WebView).
           androidHandler.postMessage(raw);
           return true;
         }
+      }
+      // Fallback: send via the canvas WebSocket (desktop browsers).
+      if (_bridgeWs && _bridgeWs.readyState === WebSocket.OPEN) {
+        _bridgeWs.send(raw);
+        return true;
       }
     } catch {}
     return false;
@@ -143,8 +150,17 @@ export function injectCanvasLiveReload(html: string): string {
   try {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const ws = new WebSocket(proto + "://" + location.host + ${JSON.stringify(CANVAS_WS_PATH)});
+    _bridgeWs = ws;
     ws.onmessage = (ev) => {
-      if (String(ev.data || "") === "reload") location.reload();
+      const msg = String(ev.data || "");
+      if (msg === "reload") { location.reload(); return; }
+      // Dispatch action-status events from the server.
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed && parsed.type === "action-status") {
+          globalThis.dispatchEvent(new CustomEvent("openclaw:a2ui-action-status", { detail: parsed }));
+        }
+      } catch {}
     };
   } catch {}
 })();
